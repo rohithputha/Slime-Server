@@ -6,9 +6,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/golang-jwt/jwt"
-	"Slime/Server/kvstore"
+	"Slime/Server/config"
 	"Slime/Server/database"
+	"Slime/Server/kvstore"
+
+	"github.com/golang-jwt/jwt"
+
+	"github.com/rohithputha/DepReq"
 )
 
 type OAuth interface{
@@ -32,11 +36,27 @@ func InitNotionAuth(clientIdSecretEncode string, stateKvStore *kvstore.KVStore[s
 
 func (na *NotionAuth) AuthRedirect() http.HandlerFunc{
 	return func (w http.ResponseWriter, r *http.Request){
+		
+		depReqApi := DepReq.GetDepReqApi()
+		c, err:=depReqApi.Get("Slime/Server/config")
+		if err != nil {
+			http.Error(w,err.Error(),http.StatusInternalServerError)
+			return
+		}
+		config := c.(config.Config)
+
 		queryParams := r.URL.Query()
 		state:= queryParams.Get("state")
 		code := queryParams.Get("code")
+		e := queryParams.Get("error")
 		na.stateKvStore.Set(state,"InProgress")
 
+		defer na.stateKvStore.Delete(state)
+		if e !="" {
+			na.stateKvStore.Delete(state)
+			http.Error(w,e,http.StatusInternalServerError)
+			return
+		}
 		jwtDecodedTk, _ := jwt.Parse(state, func(token *jwt.Token) (interface{}, error) {
 			return []byte("hvyam319"), nil
 		})
@@ -49,11 +69,13 @@ func (na *NotionAuth) AuthRedirect() http.HandlerFunc{
 		}
 		jsonBytes, _ := json.Marshal(authPayload)
 		req, _ :=http.NewRequest("POST","https://api.notion.com/v1/oauth/token",bytes.NewBuffer(jsonBytes))
-		req.Header.Add("Authorization", `Basic "`+na.clientIdSecretEncode+`"`)
+		req.Header.Add("Authorization", `Basic "`+config.Slime.NotionBase64Key+`"`)
 		req.Header.Add("Content-Type","application/json")
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
+
+			fmt.Println(err)
 			w.Header().Set("Content-Type", "text/html")
 			fmt.Fprint(w, `
 			<!DOCTYPE html>
@@ -72,6 +94,7 @@ func (na *NotionAuth) AuthRedirect() http.HandlerFunc{
 		var authResp map[string]string
 		jsonDecoder.Decode(&authResp)
 		if authResp["error"] != "" {
+			fmt.Println(authResp["error"])
 			w.Header().Set("Content-Type", "text/html")
 			fmt.Fprint(w, `
 			<!DOCTYPE html>
@@ -91,7 +114,7 @@ func (na *NotionAuth) AuthRedirect() http.HandlerFunc{
 			http.Error(w,ierr.Error(),http.StatusInternalServerError)
 			return
 		}
-		na.stateKvStore.Delete(state)
+		
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprint(w, `
 		<!DOCTYPE html>
@@ -107,13 +130,16 @@ func (na *NotionAuth) AuthRedirect() http.HandlerFunc{
 
 func(na *NotionAuth) GetAuthState() http.HandlerFunc{
 	return func(w http.ResponseWriter, r *http.Request){
-		var user map[string]string
-		err := json.NewDecoder(r.Body).Decode(&user)
+		userSessionCookie, err := r.Cookie("userSession")
 		if err != nil {
 			http.Error(w,err.Error(),http.StatusInternalServerError)
 			return
 		}
-		jwt := generateJwtToken(user["user"])
+		userSessionToken ,err :=jwt.Parse(userSessionCookie.Value, func(token *jwt.Token) (interface{}, error) {
+			return []byte("hvyam319"), nil
+		})
+		userID:= userSessionToken.Claims.(jwt.MapClaims)["user"].(string)
+		jwt := generateJwtToken(userID)
 		cookie:= &http.Cookie{
 			Name: "state",
 			Value: jwt,
@@ -125,7 +151,7 @@ func(na *NotionAuth) GetAuthState() http.HandlerFunc{
 		na.stateKvStore.Set(jwt,"InProgress")
 		http.SetCookie(w,cookie)
 		w.Header().Set("Content-Type","application/json")
-		json.NewEncoder(w).Encode(map[string]string{"notion-auth-state-set":"success"})	
+		json.NewEncoder(w).Encode(map[string]string{"notion-auth-state-set":jwt})	
 	}
 }
 
@@ -147,6 +173,43 @@ func (na *NotionAuth) GetAuthStatus() http.HandlerFunc{
 	}
 }
 
+func (na *NotionAuth) GetNotionIn() http.HandlerFunc{
+	
+	return func (w http.ResponseWriter, r *http.Request){
+		stateCookie, err := r.Cookie("state")
+		if err==nil{
+			fmt.Println("State cookie found")
+			fmt.Println(stateCookie.Value)
+			fmt.Println(na.stateKvStore.Get(stateCookie.Value))
+			if na.stateKvStore.Get(stateCookie.Value) == "InProgress" {
+				fmt.Println("sending processing")
+				w.WriteHeader(http.StatusCreated)  
+				return
+			}
+		}
+
+
+		userSession, err := r.Cookie("userSession")
+		if err != nil{
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		jwtDecodedTk, _ := jwt.Parse(userSession.Value, func(token *jwt.Token) (interface{}, error) {
+		return []byte("hvyam319"), nil
+		})
+	userid := jwtDecodedTk.Claims.(jwt.MapClaims)["user"]
+		dbConn := na.connPool.GetConnection()
+		defer na.connPool.ReleaseConnection(dbConn)
+		var accesstoken string
+		err = dbConn.QueryRow("SELECT accesstk FROM notionaccess WHERE userid=$1",userid).Scan(&accesstoken)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized) 
+			return
+		}
+		
+		w.WriteHeader(http.StatusOK) 
+	}
+}
 
 func generateJwtToken(user string) string{
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,jwt.MapClaims{

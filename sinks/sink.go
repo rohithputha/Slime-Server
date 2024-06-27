@@ -1,24 +1,28 @@
-package main
+package sinks
 
 import (
+	"Slime/Server/database"
 	"Slime/Server/models"
 	"bytes"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 type Sink interface {
-	publishToSink()
+	PublishToSink()
 }
 
 type NotionSink struct {
-	notionSink chan models.SlimeNotionNote
+	NotionSinkChan chan models.SlimeNotionNote
+	ConnPool *database.ConnectionPool
 }
 
-func (ns *NotionSink) publishToSink() {
+func (ns *NotionSink) PublishToSink() {
 	for {
-		d := <-ns.notionSink
+		d := <-ns.NotionSinkChan
 		fmt.Println(d)
+		d.Note = strings.ReplaceAll(d.Note, `"`, `\"`)
 		data := bytes.NewBuffer([]byte(`{
 			"children":[
 				{
@@ -38,10 +42,18 @@ func (ns *NotionSink) publishToSink() {
 				}
 			]
 		}`))
+        conn:= ns.ConnPool.GetConnection()
+		var notionAccessToken string
+		err := conn.QueryRow(`SELECT accesstk FROM notionaccess WHERE userid=$1`,d.User).Scan(&notionAccessToken)
+		if err != nil {
+			fmt.Println("Error in getting notion access token")
+			return
+		}
+
 
 		fmt.Println("https://api.notion.com/v1/blocks/"+d.PageID+"/children")
 		req, _:= http.NewRequest("PATCH","https://api.notion.com/v1/blocks/"+d.PageID+"/children",data)
-		req.Header.Add("Authorization","Bearer secret_UtusC7jombTNwll5OFplbIpAawkE5Hma8sjhvRtWFb4")
+		req.Header.Add("Authorization","Bearer "+notionAccessToken)
 		req.Header.Add("Content-Type","application/json")
 		req.Header.Add("Notion-Version","2022-06-28")
 		client := &http.Client{}

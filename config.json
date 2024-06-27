@@ -1,11 +1,12 @@
 
 {
     "databaseConfig":{
+        "connectionPoolSize":3,
         "user":"postgres",
         "password":"hvyam319",
-        "database":"postgres"
+        "dbname":"postgres"
     },
-    "SlimeConfig":{
+    "slimeConfig":{
         "notionBase64Key":"MzQ2YzMyYmItNDhiNS00MGJiLWI3MzItMDAyY2M3NWM4N2ZlOnNlY3JldF9KWWN4aURleTE1UlpId0U0blRyTmlHS0JyS2tCTjlrOE91UEZpdEJmUnFR"
     }
 }

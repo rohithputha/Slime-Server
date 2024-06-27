@@ -22,7 +22,7 @@ func (dbp *Database) GetDataChan() chan models.DatabaseNote {
 	return dbp.dataChan
 }
 
-func (dbp *Database) InsertData(testNumber int) {
+func (dbp *Database) InsertData() {
 	for {
 		data := <-dbp.dataChan
 		conn := dbp.conPool.GetConnection()

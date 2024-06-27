@@ -14,6 +14,6 @@ type DatabaseConfig struct {
 }
 
 type SlimeConfig struct {
-	NotionBase64Key string `json:"slimeNotionToken"`
+	NotionBase64Key string `json:"notionBase64Key"`
 }
 

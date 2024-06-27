@@ -1,4 +1,12 @@
 github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=
 github.com/golang-jwt/jwt v3.2.2+incompatible/go.mod h1:8pz2t5EyA70fFQQSrl6XZXzqecmYZeUEB8OUGHkxJ+I=
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/lib/pq v1.10.9 h1:YXG7RB+JIjhP29X+OtkiDnYaXQwpS4JEWq7dtCCRUEw=
 github.com/lib/pq v1.10.9/go.mod h1:AlVN5x4E4T544tWzH6hKfbfQvm3HdbOxrmggDNAPY9o=
+github.com/rohithputha/DepReq v0.0.1 h1:XH7F5cfw5BCReE3lVJxxAapxWUQfp5xXz0DAWSJR8+o=
+github.com/rohithputha/DepReq v0.0.1/go.mod h1:QIgwB01i7lat6o78lVW6pQ2z82SNWMyQeK7oGT93Uo4=
+github.com/rohithputha/DepReq v0.0.2-0.20240619142241-d0dfb912921a h1:+nmDUASFbDCeH9uZinnZ76tW5+IGfj1MuwDy8eJAmU0=
+github.com/rohithputha/DepReq v0.0.2-0.20240619142241-d0dfb912921a/go.mod h1:QIgwB01i7lat6o78lVW6pQ2z82SNWMyQeK7oGT93Uo4=
+github.com/rohithputha/DepReq v0.0.2-0.20240619161722-ea6d6fab205b h1:NuvOccEf3Iq4m3b27/jIENto2OzcP09TntgBdW5HFao=
+github.com/rohithputha/DepReq v0.0.2-0.20240619161722-ea6d6fab205b/go.mod h1:QIgwB01i7lat6o78lVW6pQ2z82SNWMyQeK7oGT93Uo4=
