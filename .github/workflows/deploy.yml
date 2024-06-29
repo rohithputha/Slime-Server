@@ -17,7 +17,7 @@ jobs:
         with:
           host: ${{ secrets.DROPLET_IP }}
           username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "."
           target: "."
       
@@ -26,7 +26,7 @@ jobs:
         with:
           host: ${{ secrets.DROPLET_IP }}
           username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             docker build -t slime-server .
             docker stop slime-server || true
