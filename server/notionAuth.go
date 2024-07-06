@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"Slime/Server/config"
 	"Slime/Server/database"
+	"Slime/Server/htmltemplate"
 	"Slime/Server/kvstore"
 
 	"github.com/golang-jwt/jwt"
@@ -15,9 +17,6 @@ import (
 	"github.com/rohithputha/DepReq"
 )
 
-type OAuth interface{
-
-}
 
 type NotionAuth struct {
 	clientIdSecretEncode string
@@ -36,7 +35,7 @@ func InitNotionAuth(clientIdSecretEncode string, stateKvStore *kvstore.KVStore[s
 
 func (na *NotionAuth) AuthRedirect() http.HandlerFunc{
 	return func (w http.ResponseWriter, r *http.Request){
-		
+		w.Header().Set("Content-Type", "text/html")
 		depReqApi := DepReq.GetDepReqApi()
 		c, err:=depReqApi.Get("Slime/Server/config")
 		if err != nil {
@@ -50,8 +49,15 @@ func (na *NotionAuth) AuthRedirect() http.HandlerFunc{
 		code := queryParams.Get("code")
 		e := queryParams.Get("error")
 		na.stateKvStore.Set(state,"InProgress")
-
 		defer na.stateKvStore.Delete(state)
+		defer http.SetCookie(w, &http.Cookie{
+			Name: "state",
+			Value: "",
+			Expires: time.Unix(0,0),
+			Path: "/",
+		})
+
+
 		if e !="" {
 			na.stateKvStore.Delete(state)
 			http.Error(w,e,http.StatusInternalServerError)
@@ -65,7 +71,7 @@ func (na *NotionAuth) AuthRedirect() http.HandlerFunc{
 		authPayload := map[string]string{
 			"code":code,
 			"grant_type":"authorization_code",
-			"redirect_uri":"http://localhost:8080/api/notion/auth/redirect/",
+			"redirect_uri": config.Slime.NotionRedirectUrl,
 		}
 		jsonBytes, _ := json.Marshal(authPayload)
 		req, _ :=http.NewRequest("POST","https://api.notion.com/v1/oauth/token",bytes.NewBuffer(jsonBytes))
@@ -74,18 +80,9 @@ func (na *NotionAuth) AuthRedirect() http.HandlerFunc{
 		client := &http.Client{}
 		resp, err := client.Do(req)
 		if err != nil {
-
 			fmt.Println(err)
-			w.Header().Set("Content-Type", "text/html")
-			fmt.Fprint(w, `
-			<!DOCTYPE html>
-			<html>
-			<head>
-				<title>Authentication Failed</title>
-			</head>
-			<body> <p> Authentication Failed. You can close this window. <p> </body>
-			</html>
-			`)
+			
+			fmt.Fprint(w,htmltemplate.GetSimpleHtmlMessagePage("Authentication Failed", "Authentication Failed. You can close this window.",err))
 			return 
 		}
 
@@ -95,36 +92,20 @@ func (na *NotionAuth) AuthRedirect() http.HandlerFunc{
 		jsonDecoder.Decode(&authResp)
 		if authResp["error"] != "" {
 			fmt.Println(authResp["error"])
-			w.Header().Set("Content-Type", "text/html")
-			fmt.Fprint(w, `
-			<!DOCTYPE html>
-			<html>
-			<head>
-				<title>Authentication Failed</title>
-			</head>
-			<body> <p> Authentication Failed. You can close this window. <p> </body>
-			</html>
-			`)
+			fmt.Fprint(w, htmltemplate.GetSimpleHtmlMessagePage("Authentication Failed", "Authentication Failed. You can close this window.",nil))
 			return 
 		}
 
 		dbConn := na.connPool.GetConnection()
+		defer na.connPool.ReleaseConnection(dbConn)
+		
 		_, ierr := dbConn.Exec("INSERT INTO  notionaccess (userid,accesstk) VALUES ($1,$2) ON CONFLICT (userid) DO NOTHING" ,userid,authResp["access_token"])
 		if (ierr != nil) {
-			http.Error(w,ierr.Error(),http.StatusInternalServerError)
+			fmt.Fprint(w,htmltemplate.GetSimpleHtmlMessagePage("Authentication Failed", "Authentication Failed. You can close this window.",ierr))
 			return
 		}
-		
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, `
-		<!DOCTYPE html>
-		<html>
-		<head>
-			<title>Authentication Complete</title>
-		</head>
-		<body> <p> Authentication Complete. You can close this window. <p> </body>
-		</html>
-		`)
+
+		fmt.Fprint(w, htmltemplate.GetSimpleHtmlMessagePage("Authentication Success", "Authentication Success. You can close this window.", nil))
 	}
 }
 
@@ -155,24 +136,6 @@ func(na *NotionAuth) GetAuthState() http.HandlerFunc{
 	}
 }
 
-func (na *NotionAuth) GetAuthStatus() http.HandlerFunc{
-	return func(w http.ResponseWriter, r *http.Request){
-		stateToken, err := r.Cookie("state")
-		if err != nil {
-			http.Error(w,err.Error(),http.StatusInternalServerError)
-			return
-		}
-		
-		w.Header().Set("Content-Type","application/json")
-		if progress:= na.stateKvStore.Get(stateToken.Value); progress == "" {
-			json.NewEncoder(w).Encode(map[string]string{"notion-auth-status":"Success"})
-		}else{
-			json.NewEncoder(w).Encode(map[string]string{"notion-auth-status":progress})
-		}
-		
-	}
-}
-
 func (na *NotionAuth) GetNotionIn() http.HandlerFunc{
 	
 	return func (w http.ResponseWriter, r *http.Request){
@@ -183,7 +146,7 @@ func (na *NotionAuth) GetNotionIn() http.HandlerFunc{
 			fmt.Println(na.stateKvStore.Get(stateCookie.Value))
 			if na.stateKvStore.Get(stateCookie.Value) == "InProgress" {
 				fmt.Println("sending processing")
-				w.WriteHeader(http.StatusCreated)  
+				w.WriteHeader(http.StatusCreated)  	
 				return
 			}
 		}
@@ -195,11 +158,13 @@ func (na *NotionAuth) GetNotionIn() http.HandlerFunc{
 			return
 		}
 		jwtDecodedTk, _ := jwt.Parse(userSession.Value, func(token *jwt.Token) (interface{}, error) {
-		return []byte("hvyam319"), nil
-		})
-	userid := jwtDecodedTk.Claims.(jwt.MapClaims)["user"]
+			return []byte("hvyam319"), nil
+			})
+		userid := jwtDecodedTk.Claims.(jwt.MapClaims)["user"]
+		
 		dbConn := na.connPool.GetConnection()
 		defer na.connPool.ReleaseConnection(dbConn)
+
 		var accesstoken string
 		err = dbConn.QueryRow("SELECT accesstk FROM notionaccess WHERE userid=$1",userid).Scan(&accesstoken)
 		if err != nil {
@@ -222,3 +187,6 @@ func generateJwtToken(user string) string{
 func GetHeartbeatHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
+
+
+

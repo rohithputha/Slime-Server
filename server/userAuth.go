@@ -23,6 +23,7 @@ func (ua *UserAuth) UserLogin() http.HandlerFunc {
 		var loginInfo map[string]string
 		json.NewDecoder(r.Body).Decode(&loginInfo)
 		fmt.Println("received login request:"+loginInfo["username"])
+		
 		conn := ua.connPool.GetConnection()
 		defer ua.connPool.ReleaseConnection(conn)
 
@@ -48,6 +49,7 @@ func (ua *UserAuth) UserSignup() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request){
 		conn := ua.connPool.GetConnection()
 		defer ua.connPool.ReleaseConnection(conn)
+
 		var signupInfo map[string]string
 		json.NewDecoder(r.Body).Decode(&signupInfo)
 		genUUID := uuid.NewSHA1(uuid.NameSpaceURL, []byte(signupInfo["username"])).String()
@@ -80,4 +82,5 @@ func (ua *UserAuth) UserIn() http.HandlerFunc {
 
 }
 
+	
 

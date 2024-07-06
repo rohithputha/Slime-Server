@@ -10,3 +10,9 @@ github.com/rohithputha/DepReq v0.0.2-0.20240619142241-d0dfb912921a h1:+nmDUASFbD
 github.com/rohithputha/DepReq v0.0.2-0.20240619142241-d0dfb912921a/go.mod h1:QIgwB01i7lat6o78lVW6pQ2z82SNWMyQeK7oGT93Uo4=
 github.com/rohithputha/DepReq v0.0.2-0.20240619161722-ea6d6fab205b h1:NuvOccEf3Iq4m3b27/jIENto2OzcP09TntgBdW5HFao=
 github.com/rohithputha/DepReq v0.0.2-0.20240619161722-ea6d6fab205b/go.mod h1:QIgwB01i7lat6o78lVW6pQ2z82SNWMyQeK7oGT93Uo4=
+golang.org/x/crypto v0.24.0 h1:mnl8DM0o513X8fdIkmyFE/5hTYxbwYOjDS/+rK6qpRI=
+golang.org/x/crypto v0.24.0/go.mod h1:Z1PMYSOR5nyMcyAVAIQSKCDwalqy85Aqn1x3Ws4L5DM=
+golang.org/x/net v0.21.0 h1:AQyQV4dYCvJ7vGmJyKki9+PBdyvhkSd8EIx/qb0AYv4=
+golang.org/x/net v0.21.0/go.mod h1:bIjVDfnllIU7BJ2DNgfnXvpSvtn8VRwhlsaeUTyUS44=
+golang.org/x/text v0.16.0 h1:a94ExnEXNtEwYLGJSIUxnWoxoRz/ZcCsV63ROupILh4=
+golang.org/x/text v0.16.0/go.mod h1:GhwF1Be+LQoKShO3cGOHzqOgRrGaYc9AvblQOmPVHnI=

@@ -42,7 +42,7 @@ func(no *NotionOps) PostNoteHandlerFunc(databaseChan chan models.DatabaseNote, n
         data.User = userID
 
 		fmt.Println(data)
-		fmt.Println("Note saved")
+		fmt.Println("Note saving to database and notion")
 		databaseChan <- models.DatabaseNote{Sink: data.SinkType, Note: data}
 		if data.SinkType == "notion" || data.SinkType == "" {
 			notionSink <- data

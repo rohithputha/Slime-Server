@@ -23,6 +23,7 @@ func (ns *NotionSink) PublishToSink() {
 		d := <-ns.NotionSinkChan
 		fmt.Println(d)
 		d.Note = strings.ReplaceAll(d.Note, `"`, `\"`)
+		d.Note = strings.ReplaceAll(d.Note, "\n", "\\n")
 		data := bytes.NewBuffer([]byte(`{
 			"children":[
 				{
@@ -33,7 +34,7 @@ func (ns *NotionSink) PublishToSink() {
 							{
 								"type":"text",	
 								"text":{
-									"content":"`+d.Note+`",
+									"content":"`+string(d.Note)+`",
 									"link":null
 								}
 							}
@@ -42,7 +43,10 @@ func (ns *NotionSink) PublishToSink() {
 				}
 			]
 		}`))
+
         conn:= ns.ConnPool.GetConnection()
+		fmt.Println(data)
+
 		var notionAccessToken string
 		err := conn.QueryRow(`SELECT accesstk FROM notionaccess WHERE userid=$1`,d.User).Scan(&notionAccessToken)
 		if err != nil {
@@ -60,5 +64,6 @@ func (ns *NotionSink) PublishToSink() {
 		resp, _ := client.Do(req)
 		fmt.Println(resp)
 		fmt.Println("Note saved into Notion")
+		ns.ConnPool.ReleaseConnection(conn)
 	}
 }

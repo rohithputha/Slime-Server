@@ -1,12 +1,14 @@
-
 {
     "databaseConfig":{
-        "connectionPoolSize":3,
+        "connectionPoolSize":5,
         "user":"postgres",
-        "password":"hvyam319",
-        "dbname":"postgres"
+        "password":"hvyam319#Narad",
+        "dbname":"postgres",
+        "host":"narad_postgres"
     },
     "slimeConfig":{
+        "mode":"prod",
+        "notionRedirectUrl":"https://narad.online/api/notion/auth/redirect/",
         "notionBase64Key":"MzQ2YzMyYmItNDhiNS00MGJiLWI3MzItMDAyY2M3NWM4N2ZlOnNlY3JldF9KWWN4aURleTE1UlpId0U0blRyTmlHS0JyS2tCTjlrOE91UEZpdEJmUnFR"
     }
 }

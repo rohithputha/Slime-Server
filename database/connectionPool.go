@@ -2,10 +2,12 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"sync"
 
-	"github.com/rohithputha/DepReq"
 	"Slime/Server/config"
+
+	"github.com/rohithputha/DepReq"
 )
 
 var instance *ConnectionPool
@@ -26,7 +28,7 @@ func GetConnectionPool() *ConnectionPool{
 		instance = &ConnectionPool{}
 		instance.conn = make(chan *sql.DB,config.Database.ConnectionPoolSize)
 		for i:=0; i<config.Database.ConnectionPoolSize; i++ {
-			conn, err := sql.Open("postgres", "user="+config.Database.User+" password="+config.Database.Password+" dbname="+config.Database.Dbname+" sslmode=disable")
+			conn, err := sql.Open("postgres", "host="+config.Database.Host+"  user="+config.Database.User+" password="+config.Database.Password+" dbname="+config.Database.Dbname+" sslmode=disable")
 			if err != nil {
 				panic(err)
 			}
@@ -45,7 +47,15 @@ func (cp *ConnectionPool) ReleaseConnection(conn *sql.DB) {
 }
 
 func (cp *ConnectionPool) CloseConnectionPool() {
-	for i:=0; i<3; i++ {
+	depReqApi := DepReq.GetDepReqApi()
+	c, err := depReqApi.Get("Slime/Server/config")
+		if err != nil {
+			panic(err)
+		}
+	config := c.(config.Config)
+
+	for i:=0; i<config.Database.ConnectionPoolSize; i++ {
+		fmt.Println("Closing connection :"+fmt.Sprintf("%d",i))
 		conn := <-cp.conn
 		conn.Close()
 	}

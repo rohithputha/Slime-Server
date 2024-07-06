@@ -11,9 +11,12 @@ type DatabaseConfig struct {
 	Password 		string `json:"password"`
 	Dbname 			string `json:"dbname"`
 	Sslmode 		string `json:"sslmode"`
+	Host 			string `json:"host"`
 }
 
 type SlimeConfig struct {
 	NotionBase64Key string `json:"notionBase64Key"`
+	NotionRedirectUrl string `json:"notionRedirectUrl"`
+	Mode string `json:"mode"`
 }
 

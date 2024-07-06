@@ -15,6 +15,7 @@ import (
 	"Slime/Server/sinks"
 
 	"github.com/rohithputha/DepReq"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 var notesStore *database.Database
@@ -67,7 +68,6 @@ func main() {
 
 	mux.HandleFunc("GET /api/notion/auth/state", notionAuth.GetAuthState())
 	mux.HandleFunc("GET /api/notion/auth/redirect/",notionAuth.AuthRedirect())
-	mux.HandleFunc("GET /api/notion/auth/status",notionAuth.GetAuthStatus())
 	mux.HandleFunc("GET /api/notion/auth/in",notionAuth.GetNotionIn())
 
 	mux.HandleFunc("POST /api/user/login",userAuth.UserLogin())
@@ -75,6 +75,25 @@ func main() {
 	mux.HandleFunc("GET /api/user/in", userAuth.UserIn())
 
 	mux.HandleFunc("GET /api/heartbeat", server.GetHeartbeatHandlerFunc)
-	fmt.Println("Server started at port 8080")
-	http.ListenAndServe(":8080", mux)
+
+	if(config.Slime.Mode == "prod"){
+		certManager := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist("narad.online"),
+			Cache: 	autocert.DirCache("."),
+		}
+		server := &http.Server{
+			Addr: ":https",
+			Handler: mux,
+			TLSConfig: certManager.TLSConfig(),
+		}
+	
+		go http.ListenAndServe(":http", certManager.HTTPHandler(nil))
+	
+		fmt.Println("Server started on HTTPS port 443")
+		server.ListenAndServeTLS("", "")
+	} else {
+		http.ListenAndServe(":8080", mux)
+	}
+	
 }
